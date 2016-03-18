@@ -1,0 +1,21 @@
+{
+  "name": "webfest",
+  "version": "1.0.0",
+  "description": "Application for Autodesk Forge Webfest event",
+  "main": "server.js",
+  "dependencies": {
+    "express": "^4.13.4",
+    "socket.io": "^1.4.5",
+    "view-and-data": "^1.0.7",
+    "jquery": "^2.2.0",
+    "request": "^2.69.0",
+    "bootstrap": "^3.3.6"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "Augusto Goncalves",
+  "license": "ISC"
+}

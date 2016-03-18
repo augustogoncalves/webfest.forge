@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>Party DJ</title>
+    <link type="text/css" rel="stylesheet" href="https://developer.api.autodesk.com/viewingservice/v1/viewers/style.css?v=v1.2.22" />
+    <style>
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0px;
+        }
+        
+        body {
+            font-family: "Segoe UI", "Lucida Grande", Tahoma, sans-serif;
+            font-size: 100%;
+        }
+    </style>
+</head>
+<script src="https://developer.api.autodesk.com/viewingservice/v1/viewers/viewer3D.min.js?v=v1.2.22"></script>
+<script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+<script src="/js/jquery.min.js"></script>
+<script src="/js/jscolor.min.js"></script>
+<script src="js/Autodesk.ADN.Viewing.Extension.Color.js"></script>
+<script>
+    var _viewer;
+
+    // Show the model specified on the URN parameter
+    function showModel() {
+        var options = {
+            'document': 'urn:dXJuOmFkc2sub2JqZWN0czpvcy5vYmplY3Q6bW9kZWwyMDE2LTAyLTE1LTE3LTE5LTU4LXFlN2txcGlyZWJzZ2R5YW94aHJoeTc4a3Fya3YvY3ViZXMucnZ0',
+            'env': 'AutodeskProduction',
+            'getAccessToken': getToken,
+            'refreshToken': getToken,
+        };
+        var viewerElement = document.getElementById('viewer');
+        _viewer = new Autodesk.Viewing.Viewer3D(viewerElement, {});
+        Autodesk.Viewing.Initializer(
+            options,
+            function () {
+                _viewer.initialize();
+                loadDocument(options.document);
+            }
+        );
+    }
+
+    // Load the document (urn) on the view object
+    function loadDocument(documentId) {
+        // Find the first 3d geometry and load that.
+        Autodesk.Viewing.Document.load(
+            documentId,
+            function (doc) { // onLoadCallback
+                var geometryItems = [];
+                geometryItems = Autodesk.Viewing.Document.getSubItemsWithProperties(doc.getRootItem(), {
+                    'type': 'geometry',
+                    'role': '3d'
+                }, true);
+                if (geometryItems.length > 0) {
+                    $(_viewer.container).bind("mousemove", onMouseMove);
+                    _viewer.load(doc.getViewablePath(geometryItems[0]));
+                    _viewer.loadExtension('Autodesk.ADN.Viewing.Extension.Color');
+
+                    showColorPanel();
+                }
+            },
+            function (errorMsg) { // onErrorCallback
+                console.log("Load Error: " + errorMsg);
+            }
+        );
+    }
+
+    function showColorPanel() {
+        var colorPanel = new Autodesk.Viewing.UI.DockingPanel(_viewer.container, 'colorPanel', 'Color Panel');
+
+        colorPanel.container.style.top = "10px";
+        colorPanel.container.style.left = "10px";
+
+        colorPanel.container.style.width = "auto";
+        colorPanel.container.style.height = "auto";
+        colorPanel.container.style.resize = "auto";
+
+        colorPanel.container.appendChild(document.getElementById('colorPicker'));
+
+        colorPanel.setVisible(true);
+    }
+
+    // This calls are required if the models stays open for a long time and the token expires
+    function getToken() {
+        return makePOSTSyncRequest("/api/refreshToken");
+    }
+
+    function makePOSTSyncRequest(url) {
+        var xmlHttp = null;
+        xmlHttp = new XMLHttpRequest();
+        xmlHttp.open("POST", url, false);
+        xmlHttp.send(null);
+        return xmlHttp.responseText;
+    }
+
+    var _lastSeat = '';
+
+    function onMouseMove(e) {
+        var screenPoint = {
+            x: event.clientX,
+            y: event.clientY
+        };
+        var n = normalize(screenPoint);
+        var dbId = /*_viewer.utilities.getHitPoint*/ getHitDbId(n.x, n.y);
+        if (dbId == null) return;
+
+        highlight(dbId);
+    };
+
+    function highlight(dbId) {
+        var elementIds = [dbId];
+        _viewer.setColorMaterial(elementIds, parseInt($('#color_value').val(), 16));
+        emitMessage(dbId);
+    }
+
+    function emitMessage(dbId) {
+        _viewer.model.getProperties(dbId, function (props) {
+            props.properties.forEach(function (prop) {
+                if (prop.displayName.indexOf('Seat') >= 0) {
+                    if (prop.displayValue != _lastSeat) {
+                        _lastSeat = prop.displayValue;
+                        var socket = io.connect(location.host);
+                        socket.emit('mouseover', {
+                            seat: prop.displayValue,
+                            color: $('#color_value').val()
+                        });
+                    }
+                }
+            });
+        });
+    }
+
+    // This is a built-in method getHitPoint, but the original returns
+    // the hit point, so this modified version returns the dbId
+    function getHitDbId(x, y) {
+        y = 1.0 - y;
+        x = x * 2.0 - 1.0;
+        y = y * 2.0 - 1.0;
+
+        var vpVec = new THREE.Vector3(x, y, 1);
+
+        var result = _viewer.impl.hitTestViewport(vpVec, false);
+        //return result ? result.intersectPoint : null;
+        return result ? result.dbId : null;
+    };
+
+    // originally wrote by Philippe (http://adndevblog.typepad.com/cloud_and_mobile/2015/11/animated-radial-menu-with-css-jquery.html)
+    function normalize(screenPoint) {
+        var viewport = _viewer.navigation.getScreenViewport();
+        var n = {
+            x: (screenPoint.x - viewport.left) / viewport.width,
+            y: (screenPoint.y - viewport.top) / viewport.height
+        };
+        return n;
+    }
+</script>
+
+<body onload="showModel()" sytle="margin: 0px">
+    <div id="viewer"></div>
+    <div id="colorPicker">
+        <input name="color2" type="hidden" id="color_value" value="99cc00">
+        <button class="jscolor {valueElement: 'color_value'}">Pick a color</button>
+    </div>
+</body>
+
+</html>

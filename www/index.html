@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Forge Conference</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+    <style>
+        .vertical-center {
+            min-height: 100%;
+            /* Fallback for browsers do NOT support vh unit */
+            min-height: 100vh;
+            /* These two lines are counted as one :-)       */
+            display: flex;
+            align-items: center;
+        }
+    </style>
+</head>
+<script src="/js/jquery.min.js"></script>
+<script src="/js/bootstrap.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    $(document).ready(function () {
+        var socket = io.connect(location.host);
+
+        $('#next').click(function () {
+            socket.emit('join', {
+                seat: $('#seat').val()
+            });
+            $('#inputForm').hide();
+        });
+
+        socket.on('new_color', function (data) {
+            console.log(data);
+            $('body').css('background', data.color);
+        });
+    });
+</script>
+
+<body>
+    <div class="vertical-center">
+        <div id="inputForm" class="large container-fluid">
+            <input type="text" id="seat" class="form-control" placeholder="Enter your set number" />
+            <button id="next" class="btn-lg btn-primary">Next</button>
+        </div>
+    </div>
+</body>
+
+</html>
