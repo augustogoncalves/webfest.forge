@@ -14,7 +14,7 @@ app.use('/js', express.static(__dirname + '/node_modules/bootstrap/dist/js')); /
 app.use('/js', express.static(__dirname + '/node_modules/jquery/dist')); // redirect static calls
 app.use('/css', express.static(__dirname + '/node_modules/bootstrap/dist/css')); // redirect static calls
 
-server.listen(36743);
+server.listen(process.env.PORT || 36743);
 
 io.on('connection', function (socket) {
     socket.on('join', function (data) {
